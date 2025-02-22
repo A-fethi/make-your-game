@@ -140,7 +140,9 @@ body {
 
 #finish-message,
 #game-over,
-#victory-message {
+#victory-message,
+#level-message,
+#level-completed {
     position: absolute;
     top: 50%;
     left: 50%;

@@ -28,7 +28,7 @@ function createGameUI() {
 
     const livesImage = document.createElement('img');
 
-    livesImage.src = '/arkanoid-game/src/heart.png'
+    livesImage.src = '/src/heart.png'
     livesImage.id = 'lives-img'
     livesImage.style.width = '20px'
     livesImage.style.height = '20px'
@@ -46,6 +46,7 @@ function createGameUI() {
     timerSpan.innerHTML = 'Time: <span id="timer">0s</span>';
     const levelSpan = document.createElement('span');
     levelSpan.innerHTML = `Level: <span id="level">1</span>`;
+    levelSpan.id = 'level-span'
 
     const pauseButton = document.createElement('button');
     pauseButton.id = 'pause-button';
@@ -112,6 +113,9 @@ window.addEventListener('resize', () => {
 
 let ballX
 let ballY
+let ballSpeedX
+let ballSpeedY
+
 function gameStart() {
     const gameArea = document.getElementById('game-area');
     const paddle = document.getElementById('paddle');
@@ -153,10 +157,7 @@ function gameStart() {
         requestAnimationFrame(movePaddle);
     }
 
-    ballX = gameArea.offsetWidth / 2;
-    ballY = gameArea.offsetHeight / 2;
-    let ballSpeedX = (Math.random() * 4 + 2) * (Math.random() < 0.5 ? -1 : 1);
-    let ballSpeedY = -(Math.random() * 2 + 3);
+    resetBall()
 
     function moveBall() {
         if (!isPaused) {
@@ -203,9 +204,7 @@ function gameStart() {
                     ballSpeedY *= -1;
                 }
                 if (Array.from(bricks).every(b => b.getAttribute('data-hit') === 'true')) {
-                    // currentLevel++;
-                    // document.getElementById('level').textContent = currentLevel;
-                    gameFinish();
+                    levelCompleted();
                 }
             });
 
@@ -227,13 +226,6 @@ function gameStart() {
         requestAnimationFrame(moveBall);
     }
 
-    function resetBall() {
-        ballX = gameArea.offsetWidth / 2;
-        ballY = gameArea.offsetHeight / 2;
-        ballSpeedX = (Math.random() * 4 + 2) * (Math.random() < 0.5 ? -1 : 1);
-        ballSpeedY = -(Math.random() * 2 + 3);
-    }
-
     movePaddle()
     moveBall();
     timer();
@@ -248,6 +240,19 @@ function timer() {
         }
     }, 1000);
 }
+
+function resetBall() {
+    const ball = document.getElementById('ball');
+    const gameArea = document.getElementById('game-area');
+
+    ballX = gameArea.offsetWidth / 2;
+    ballY = gameArea.offsetHeight / 2;
+    ballSpeedX = (Math.random() * 4 + 2) * (Math.random() < 0.5 ? -1 : 1);
+    ballSpeedY = -(Math.random() * 2 + 3);
+
+    ball.style.transform = `translate(${ballX}px, ${ballY}px)`;
+}
+
 
 function togglePause() {
     isPaused = !isPaused;
@@ -304,6 +309,55 @@ function updateUI() {
     document.getElementById('timer').textContent = '0s'
 }
 
+function showLevelMessage() {
+    const gameArea = document.getElementById('game-area');
+
+    const levelMessage = document.createElement('div');
+    levelMessage.id = 'level-message';
+
+    const levelTitle = document.createElement('h2');
+    levelTitle.textContent = `Level ${currentLevel}`;
+    levelMessage.appendChild(levelTitle);
+
+    gameArea.appendChild(levelMessage);
+
+    isPaused = true;
+
+    setTimeout(() => {
+        levelMessage.remove();
+        isPaused = false;
+    }, 2000);
+}
+
+function levelCompleted() {
+    isPaused = true;
+
+    const gameArea = document.getElementById('game-area');
+
+    const levelDone = document.createElement('div');
+    levelDone.id = 'level-completed';
+
+    const levelTitle = document.createElement('h2');
+    levelTitle.textContent = `Level ${currentLevel} Completed!`;
+    levelDone.appendChild(levelTitle);
+    
+    const nextLevelButton = document.createElement('button');
+    nextLevelButton.textContent = 'Next Level';
+    levelDone.appendChild(nextLevelButton);
+    gameArea.appendChild(levelDone);
+    nextLevelButton.addEventListener('click', () => {
+        currentLevel++
+        levelDone.remove();
+        isPaused = false;
+        generateBricks();
+        resetBall();
+        showLevelMessage();
+        const levelSpan = document.getElementById('level-span')
+        levelSpan.textContent = `Level: ${currentLevel}`;
+    });
+
+}
+
 
 function gameFinish() {
     isPaused = true;
@@ -317,30 +371,14 @@ function gameFinish() {
     const finishTitle = document.createElement('h2');
     finishTitle.textContent = 'Game Completed!';
 
-    const finalScore = document.createElement('p');
-    finalScore.textContent = `Final Score: ${gameScore}`;
-
     const restartButton = document.createElement('button');
     restartButton.id = 'restart-button';
     restartButton.textContent = 'Restart Game';
     restartButton.addEventListener('click', () => {
-        finishMessage.remove();
-        
-        currentLevel++;
-        document.getElementById('level').textContent = currentLevel;
-
-        isPaused = false
-        
-        generateBricks();
-        
-        resetBall();
-        gameStart();
-        
-        const ball = document.getElementById('ball');
-        ball.style.transform = `translate(${ballX}px, ${ballY}px)`;
+        location.reload()
     });
+
     finishMessage.appendChild(finishTitle);
-    finishMessage.appendChild(finalScore);
     finishMessage.appendChild(restartButton)
     gameArea.appendChild(finishMessage);
 

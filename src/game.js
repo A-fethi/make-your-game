@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     startButton.addEventListener('click', () => {
         createGameUI();
+        showLevelMessage();
         gameStart();
         startMenu.remove();
     });
@@ -103,6 +104,9 @@ function generateBricks() {
             brick.classList.add('brick');
             brick.style.backgroundColor = colors[row % colors.length];
             brick.setAttribute('data-hit', 'false');
+            if (currentLevel > 1 && Math.random() < 0.2) {
+                brick.dataset.hits = 2
+            }
             brickArea.appendChild(brick);
         }
     }
@@ -168,7 +172,7 @@ function gameStart() {
             const score = document.getElementById('score')
             const bricks = document.querySelectorAll('.brick');
 
-            if (ballX <= 0 || ballX + ballRect.width >= gameAreaRect.width) {
+            if (ballX <= 0 || ballX + ballRect.width / 2 + 15 >= gameAreaRect.width) {
                 ballSpeedX *= -1;
                 ballX = Math.max(0, Math.min(gameAreaRect.width - ballRect.width, ballX));
             }
@@ -191,6 +195,7 @@ function gameStart() {
                 ballSpeedY *= -1.05;
             }
 
+            let collision = 0
             bricks.forEach(brick => {
                 const brickRect = brick.getBoundingClientRect();
                 if (
@@ -198,13 +203,14 @@ function gameStart() {
                     ballRect.top < brickRect.bottom &&
                     ballRect.left < brickRect.right &&
                     ballRect.right > brickRect.left &&
-                    brick.getAttribute('data-hit') === 'false'
+                    brick.getAttribute('data-hit') === 'false' && collision === 0
                 ) {
                     brick.setAttribute('data-hit', 'true');
                     brick.style.visibility = 'hidden';
                     score.textContent = +score.textContent + 1
                     gameScore++
                     ballSpeedY *= -1;
+                    collision++
                 }
                 if (!levelCompletedFlag && Array.from(bricks).every(b => b.getAttribute('data-hit') === 'true')) {
                     levelCompletedFlag = true
@@ -225,8 +231,6 @@ function gameStart() {
             ballX += ballSpeedX
             ballY += ballSpeedY
 
-            ballX = Math.max(0, Math.min(gameAreaRect.width - ballRect.width, ballX));
-            ballY = Math.max(0, Math.min(gameAreaRect.height - ballRect.height, ballY));
             ball.style.transform = `translate(${ballX}px, ${ballY}px)`
         }
         requestAnimationFrame(moveBall);

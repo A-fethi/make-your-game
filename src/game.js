@@ -4,6 +4,7 @@ let gameTimer = 0;
 let timerInterval;
 let isPaused = false;
 let currentLevel = 1;
+let levelCompletedFlag = false;
 
 document.addEventListener('DOMContentLoaded', () => {
     const startMenu = document.getElementById('start-menu');
@@ -169,10 +170,12 @@ function gameStart() {
 
             if (ballX <= 0 || ballX + ballRect.width >= gameAreaRect.width) {
                 ballSpeedX *= -1;
+                ballX = Math.max(0, Math.min(gameAreaRect.width - ballRect.width, ballX));
             }
 
             if (ballY <= 0) {
                 ballSpeedY *= -1;
+                ballY = Math.max(0, ballY);
             }
 
             if (
@@ -203,7 +206,8 @@ function gameStart() {
                     gameScore++
                     ballSpeedY *= -1;
                 }
-                if (Array.from(bricks).every(b => b.getAttribute('data-hit') === 'true')) {
+                if (!levelCompletedFlag && Array.from(bricks).every(b => b.getAttribute('data-hit') === 'true')) {
+                    levelCompletedFlag = true
                     levelCompleted();
                 }
             });
@@ -221,6 +225,8 @@ function gameStart() {
             ballX += ballSpeedX
             ballY += ballSpeedY
 
+            ballX = Math.max(0, Math.min(gameAreaRect.width - ballRect.width, ballX));
+            ballY = Math.max(0, Math.min(gameAreaRect.height - ballRect.height, ballY));
             ball.style.transform = `translate(${ballX}px, ${ballY}px)`
         }
         requestAnimationFrame(moveBall);
@@ -340,12 +346,13 @@ function levelCompleted() {
     const levelTitle = document.createElement('h2');
     levelTitle.textContent = `Level ${currentLevel} Completed!`;
     levelDone.appendChild(levelTitle);
-    
+
     const nextLevelButton = document.createElement('button');
     nextLevelButton.textContent = 'Next Level';
     levelDone.appendChild(nextLevelButton);
     gameArea.appendChild(levelDone);
     nextLevelButton.addEventListener('click', () => {
+        levelCompletedFlag = false;
         currentLevel++
         levelDone.remove();
         isPaused = false;

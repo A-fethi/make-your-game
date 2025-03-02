@@ -3,8 +3,44 @@ let gameScore = 0;
 let gameTimer = 0;
 let timerInterval;
 let isPaused = false;
+let isRespawn = false;
+let isGameOver = false;
+let moveLeft = false;
+let moveRight = false;
 let currentLevel = 1;
 let levelCompletedFlag = false;
+const story = [
+    {
+        level: 1,
+        intro: "Welcome to Heavens Prison! Your mission is to break all the bricks and escape the prison.",
+        outro: "Great job! You've completed the first level. Onward to the next challenge! will u survive? or will u be forever trapped in the prison?",
+        fail: "You've failed to escape the prison. The Guards heard the noise and caught you. Try again!"
+    },
+    {
+        level: 2,
+        intro: "Level 2: The bricks are tougher now. Stay focused and keep breaking!be carefull as some bricks contains traps or buffs, shall we test your luck?",
+        outro: "Well done! The bricks didn't stand a chance. to the the next level?",
+        fail: "You've failed to escape the prison, it seems that the guards are getting closer. Try again!"
+    },
+    {
+        level: 3,
+        intro: "Level 3: This is getting harder. Can you handle the pressure?",
+        outro: "Impressive! You're really getting the hang of this. Let's keep going!",
+        fail: "You've failed to escape the prison, the building is shaking, the guards are getting closer. Try again!"
+    },
+    {
+        level: 4,
+        intro: "Level 4: The bricks are getting stronger. Can you break them all?",
+        outro: "You did it! You've broken through all the bricks. You're almost there!",
+        fail: "You've failed to escape the prison, the building is shaking, u can hear the guards footsteps. Try again!"
+    },
+    {
+        level: 5,
+        intro: "Level 5: The final level. Can you break the bricks and escape the prison?",
+        outro: "Congratulations! You've broken all the bricks and escaped the prison. You're free!",
+        fail: "You've failed to escape the prison, the Prison is collapsing, the guards are getting closer. Try again!"
+    }
+];
 
 document.addEventListener('DOMContentLoaded', () => {
     const startMenu = document.getElementById('start-menu');
@@ -12,11 +48,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     startButton.addEventListener('click', () => {
         createGameUI();
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'ArrowLeft' || event.key.toLowerCase() === 'a') moveLeft = true;
+            if (event.key === 'ArrowRight' || event.key.toLowerCase() === 'd') moveRight = true;
+        });
+
+        document.addEventListener('keyup', (event) => {
+            if (event.key === 'ArrowLeft' || event.key.toLowerCase() === 'a') moveLeft = false;
+            if (event.key === 'ArrowRight' || event.key.toLowerCase() === 'd') moveRight = false;
+            if (event.key === ' ' && !isGameOver) togglePause();
+            if (event.key === 'ArrowUp' || event.key.toLowerCase() === 'w') {
+                if (isRespawn) {
+                    isRespawn = false
+                }
+            };
+        });
         showLevelMessage();
         gameStart();
         startMenu.remove();
     });
 });
+
 
 function createGameUI() {
     const gameContainer = document.createElement('div');
@@ -121,6 +173,8 @@ let ballY
 let ballSpeedX
 let ballSpeedY
 
+let lastTime = 0;
+
 function gameStart() {
     const gameArea = document.getElementById('game-area');
     const paddle = document.getElementById('paddle');
@@ -128,22 +182,9 @@ function gameStart() {
     const livesValue = document.getElementById('lives');
 
     let paddleSpeed = 10;
-    let moveLeft = false;
-    let moveRight = false;
-
-    document.addEventListener('keydown', (event) => {
-        if (event.key === 'ArrowLeft' || event.key.toLowerCase() === 'a') moveLeft = true;
-        if (event.key === 'ArrowRight' || event.key.toLowerCase() === 'd') moveRight = true;
-    });
-
-    document.addEventListener('keyup', (event) => {
-        if (event.key === 'ArrowLeft' || event.key.toLowerCase() === 'a') moveLeft = false;
-        if (event.key === 'ArrowRight' || event.key.toLowerCase() === 'd') moveRight = false;
-        if (event.key === ' ') togglePause();
-    });
 
     function movePaddle() {
-        if (!isPaused) {
+        if (!isPaused && !isRespawn && !isGameOver) {
             const gameAreaRect = gameArea.getBoundingClientRect();
             const paddleWidth = paddle.offsetWidth;
             let newLeft = paddle.offsetLeft;
@@ -162,14 +203,18 @@ function gameStart() {
         requestAnimationFrame(movePaddle);
     }
 
-    resetBall()
+    resetBall();
 
-    function moveBall() {
-        if (!isPaused) {
+    function moveBall(timestamp) {
+        if (!lastTime) lastTime = timestamp;
+        const deltaTime = (timestamp - lastTime) / 1000; // Convert to seconds
+        lastTime = timestamp;
+
+        if (!isPaused && !isRespawn && !isGameOver) {
             const ballRect = ball.getBoundingClientRect();
             const gameAreaRect = gameArea.getBoundingClientRect();
             const paddleRect = paddle.getBoundingClientRect();
-            const score = document.getElementById('score')
+            const score = document.getElementById('score');
             const bricks = document.querySelectorAll('.brick');
 
             if (ballX <= 0 || ballX + ballRect.width / 2 + 15 >= gameAreaRect.width) {
@@ -190,12 +235,12 @@ function gameStart() {
             ) {
                 const paddleCenter = paddleRect.left + paddleRect.width / 2;
                 const ballCenter = ballRect.left + ballRect.width / 2;
-                const relativePosition = (ballCenter - paddleCenter) / (paddleRect.width / 2)
-                ballSpeedX = relativePosition * 5
+                const relativePosition = (ballCenter - paddleCenter) / (paddleRect.width / 2);
+                ballSpeedX = relativePosition * 5;
                 ballSpeedY *= -1.05;
             }
 
-            let collision = 0
+            let collision = 0;
             bricks.forEach(brick => {
                 const brickRect = brick.getBoundingClientRect();
                 if (
@@ -207,13 +252,13 @@ function gameStart() {
                 ) {
                     brick.setAttribute('data-hit', 'true');
                     brick.style.visibility = 'hidden';
-                    score.textContent = +score.textContent + 1
-                    gameScore++
+                    score.textContent = +score.textContent + 1;
+                    gameScore++;
                     ballSpeedY *= -1;
-                    collision++
+                    collision++;
                 }
                 if (!levelCompletedFlag && Array.from(bricks).every(b => b.getAttribute('data-hit') === 'true')) {
-                    levelCompletedFlag = true
+                    levelCompletedFlag = true;
                     levelCompleted();
                 }
             });
@@ -223,21 +268,26 @@ function gameStart() {
                 resetBall();
                 livesValue.textContent = lives;
                 if (lives <= 0) {
-                    gameOver()
+                    isGameOver = true;
+                    gameOver();
                     return;
+                } else {
+                    isRespawn = true;
+                    newLeft = gameAreaRect.width / 2 - ballRect.width;
+                    newTop = gameAreaRect.height / 2 - ballRect.height;
                 }
             }
 
-            ballX += ballSpeedX
-            ballY += ballSpeedY
+            ballX += ballSpeedX * deltaTime * 60; // Normalize speed for 60 FPS
+            ballY += ballSpeedY * deltaTime * 60;
 
-            ball.style.transform = `translate(${ballX}px, ${ballY}px)`
+            ball.style.transform = `translate(${ballX}px, ${ballY}px)`;
         }
         requestAnimationFrame(moveBall);
     }
 
-    movePaddle()
-    moveBall();
+    movePaddle();
+    requestAnimationFrame(moveBall); // Start the game loop
     timer();
 }
 
@@ -329,6 +379,10 @@ function showLevelMessage() {
     levelTitle.textContent = `Level ${currentLevel}`;
     levelMessage.appendChild(levelTitle);
 
+    const storyText = document.createElement('p');
+    storyText.textContent = story[currentLevel - 1].intro;
+    levelMessage.appendChild(storyText);
+
     gameArea.appendChild(levelMessage);
 
     isPaused = true;
@@ -336,7 +390,7 @@ function showLevelMessage() {
     setTimeout(() => {
         levelMessage.remove();
         isPaused = false;
-    }, 2000);
+    }, 4000); 
 }
 
 function levelCompleted() {
@@ -351,22 +405,29 @@ function levelCompleted() {
     levelTitle.textContent = `Level ${currentLevel} Completed!`;
     levelDone.appendChild(levelTitle);
 
+    const storyText = document.createElement('p');
+    storyText.textContent = story[currentLevel - 1].outro;
+    levelDone.appendChild(storyText);
+
     const nextLevelButton = document.createElement('button');
     nextLevelButton.textContent = 'Next Level';
     levelDone.appendChild(nextLevelButton);
     gameArea.appendChild(levelDone);
     nextLevelButton.addEventListener('click', () => {
-        levelCompletedFlag = false;
-        currentLevel++
-        levelDone.remove();
-        isPaused = false;
-        generateBricks();
-        resetBall();
-        showLevelMessage();
-        const levelSpan = document.getElementById('level-span')
-        levelSpan.textContent = `Level: ${currentLevel}`;
+        if (currentLevel >= story.length) {
+            gameFinish();
+        } else {
+            levelCompletedFlag = false;
+            currentLevel++
+            levelDone.remove();
+            isPaused = false;
+            generateBricks();
+            resetBall();
+            showLevelMessage();
+            const levelSpan = document.getElementById('level-span')
+            levelSpan.textContent = `Level: ${currentLevel}`;
+        }
     });
-
 }
 
 
@@ -382,6 +443,10 @@ function gameFinish() {
     const finishTitle = document.createElement('h2');
     finishTitle.textContent = 'Game Completed!';
 
+    const storyText = document.createElement('p');
+    storyText.textContent = "Congratulations! You've completed the game. Thanks for playing!";
+    finishMessage.appendChild(storyText);
+
     const restartButton = document.createElement('button');
     restartButton.id = 'restart-button';
     restartButton.textContent = 'Restart Game';
@@ -392,7 +457,6 @@ function gameFinish() {
     finishMessage.appendChild(finishTitle);
     finishMessage.appendChild(restartButton)
     gameArea.appendChild(finishMessage);
-
 }
 
 function gameOver() {
@@ -405,7 +469,10 @@ function gameOver() {
     gameOverMessage.id = 'game-over';
 
     const gameOverTitle = document.createElement('h2');
-    gameOverTitle.textContent = 'Game Over';
+    gameOverTitle.textContent = 'Game Over\n'
+    const storyText = document.createElement('p');
+    storyText.textContent = story[currentLevel - 1].fail;
+    gameOverMessage.appendChild(storyText);
     gameOverMessage.appendChild(gameOverTitle);
 
     const finalScore = document.createElement('p');

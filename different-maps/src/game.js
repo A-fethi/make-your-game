@@ -47,6 +47,15 @@ function getTile(map, col, row) {
     return map.tiles[row * map.columns + col] || 0;
 }
 
+const getColor = () => {
+    let value = "#"
+    const hex = "0123456789ABCDEF"
+    for (let i = 0; i < 6; i++) {
+        value += hex[Math.floor(Math.random(i) * hex.length)]
+    }
+    return value
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const startMenu = document.getElementById('start-menu');
     const startButton = document.getElementById('start-button');
@@ -373,7 +382,7 @@ function resetGameState() {
 function updateUI() {
     document.getElementById('score').textContent = score;
     document.getElementById('lives').textContent = lives;
-    document.getElementById('timer').textContent = '0s'
+    document.getElementById('timer').textContent = '0s';
 }
 
 function showLevelMessage() {
@@ -417,6 +426,7 @@ function levelCompleted() {
         currentLevel++;
         levelDone.remove();
         isPaused = false;
+        gameArea.style.backgroundColor = getColor()
         generateBricks(currentLevel-1);
         resetBall();
         showLevelMessage();

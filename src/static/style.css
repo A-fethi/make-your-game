@@ -118,8 +118,8 @@ body {
     border: 1px solid #000000;
     box-sizing: border-box;
     border-radius: 3px;
-    aspect-ratio: 2/1;
-    width: 100%;
+    aspect-ratio: 3/1;
+    /* width: 100%; */
 }
 
 #pause-menu {

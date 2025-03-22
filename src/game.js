@@ -7,8 +7,68 @@ let isRespawn = false;
 let isGameOver = false;
 let moveLeft = false;
 let moveRight = false;
+let paddleSpeed;
 let currentLevel = 1;
 let levelCompletedFlag = false;
+
+const tileMaps = [
+    {
+        columns: 5,
+        rows: 2,
+        size: 50,
+        tiles: [
+            1, 3, 4, 0, 2,
+            1, 2, 0, 3, 4,
+        ]
+    },
+    {
+        columns: 6,
+        rows: 3,
+        size: 50,
+        tiles: [
+            1, 0, 4, 2, 3, 3,
+            4, 2, 0, 3, 2, 0,
+            1, 0, 2, 4, 1, 3,
+        ]
+    },
+    {
+        columns: 7,
+        rows: 4,
+        size: 50,
+        tiles: [
+            3, 3, 3, 3, 3, 3, 3,
+            2, 0, 2, 2, 2, 0, 2,
+            1, 0, 1, 0, 1, 0, 1,
+            4, 4, 4, 4, 4, 4, 4,
+        ]
+    },
+    {
+        columns: 8,
+        rows: 5,
+        size: 50,
+        tiles: [
+            4, 3, 2, 1, 1, 2, 3, 4,
+            3, 0, 0, 2, 2, 0, 0, 3,
+            2, 0, 1, 3, 3, 1, 0, 2,
+            1, 2, 3, 4, 4, 3, 2, 1,
+            0, 0, 1, 2, 2, 1, 0, 0,
+        ]
+    }
+];
+
+function getTile(map, col, row) {
+    return map.tiles[row * map.columns + col] || 0;
+}
+
+const getColor = () => {
+    let value = "#"
+    const hex = "0123456789ABCDEF"
+    for (let i = 0; i < 6; i++) {
+        value += hex[Math.floor(Math.random(i) * hex.length)]
+    }
+    return value
+}
+
 const story = [
     {
         level: 1,
@@ -18,25 +78,19 @@ const story = [
     },
     {
         level: 2,
-        intro: "Level 2: The bricks are tougher now. Stay focused and keep breaking!be carefull as some bricks contains traps or buffs, shall we test your luck?",
-        outro: "Well done! The bricks didn't stand a chance. to the the next level?",
-        fail: "You've failed to escape the prison, it seems that the guards are getting closer. Try again!"
-    },
-    {
-        level: 3,
-        intro: "Level 3: This is getting harder. Can you handle the pressure?",
+        intro: "Level 2: This is getting harder. Can you handle the pressure?",
         outro: "Impressive! You're really getting the hang of this. Let's keep going!",
         fail: "You've failed to escape the prison, the building is shaking, the guards are getting closer. Try again!"
     },
     {
-        level: 4,
-        intro: "Level 4: The bricks are getting stronger. Can you break them all?",
+        level: 3,
+        intro: "Level 3: The bricks are getting stronger. Can you break them all?",
         outro: "You did it! You've broken through all the bricks. You're almost there!",
         fail: "You've failed to escape the prison, the building is shaking, u can hear the guards footsteps. Try again!"
     },
     {
-        level: 5,
-        intro: "Level 5: The final level. Can you break the bricks and escape the prison?",
+        level: 4,
+        intro: "Level 4: The final level. Can you break the bricks and escape the prison?",
         outro: "Congratulations! You've broken all the bricks and escaped the prison. You're free!",
         fail: "You've failed to escape the prison, the Prison is collapsing, the guards are getting closer. Try again!"
     }
@@ -134,30 +188,28 @@ function createGameUI() {
 
     document.body.appendChild(gameContainer);
     paddle.style.left = `44%`;
-    generateBricks();
+    generateBricks(currentLevel - 1);
 }
 
-function generateBricks() {
+function generateBricks(mapIndex = 0) {
     const brickArea = document.getElementById('bricks');
-    const gameArea = document.getElementById('game-area');
     brickArea.innerHTML = '';
 
-    const gameWidth = gameArea.clientWidth;
-    const desiredBrickWidth = 50;
-    const numBricksPerRow = Math.floor(gameWidth / desiredBrickWidth);
-    const numRows = currentLevel === 1 ? 1 : currentLevel + 1;
+    const map = tileMaps[mapIndex]
     const colors = ['red', 'orange', 'yellow', 'green', 'blue'];
 
-    brickArea.style.gridTemplateColumns = `repeat(${numBricksPerRow}, 1fr)`;
+    brickArea.style.gridTemplateColumns = `repeat(${map.columns}, 1fr)`;
 
-    for (let row = 0; row < numRows; row++) {
-        for (let col = 0; col < numBricksPerRow; col++) {
+    for (let row = 0; row < map.rows; row++) {
+        for (let col = 0; col < map.columns; col++) {
+            const tileValue = getTile(map, col, row)
             const brick = document.createElement('div');
             brick.classList.add('brick');
-            brick.style.backgroundColor = colors[row % colors.length];
+            brick.style.backgroundColor = colors[tileValue];
             brick.setAttribute('data-hit', 'false');
             if (currentLevel > 1 && Math.random() < 0.2) {
                 brick.dataset.hits = 2
+                brick.style.backgroundColor = '#795548'
             }
             brickArea.appendChild(brick);
         }
@@ -181,7 +233,7 @@ function gameStart() {
     const ball = document.getElementById('ball');
     const livesValue = document.getElementById('lives');
 
-    let paddleSpeed = 10;
+    paddleSpeed = 10;
 
     function movePaddle() {
         if (!isPaused && !isRespawn && !isGameOver) {
@@ -235,9 +287,9 @@ function gameStart() {
             ) {
                 const paddleCenter = paddleRect.left + paddleRect.width / 2;
                 const ballCenter = ballRect.left + ballRect.width / 2;
-                const relativePosition = (ballCenter - paddleCenter) / (paddleRect.width / 2);
-                ballSpeedX = relativePosition * 5;
-                ballSpeedY *= -1.05;
+                const relativePosition = (ballCenter - paddleCenter) / (paddleRect.width / 2)
+                ballSpeedX = relativePosition * 3
+                ballSpeedY *= -1.01;
             }
 
             let collision = 0;
@@ -250,12 +302,24 @@ function gameStart() {
                     ballRect.right > brickRect.left &&
                     brick.getAttribute('data-hit') === 'false' && collision === 0
                 ) {
-                    brick.setAttribute('data-hit', 'true');
-                    brick.style.visibility = 'hidden';
-                    score.textContent = +score.textContent + 1;
-                    gameScore++;
+                    if (brick.dataset.hits && parseInt(brick.dataset.hits) > 0) {
+                        let hitsLeft = parseInt(brick.dataset.hits) - 1
+                        brick.dataset.hits = hitsLeft
+
+                        if (hitsLeft > 0) {
+                            brick.style.backgroundColor = '#b71c1c'
+                        } else {
+                            brick.setAttribute('data-hit', 'true')
+                            brick.style.visibility = 'hidden'
+                        }
+                    } else {
+                        brick.setAttribute('data-hit', 'true');
+                        brick.style.visibility = 'hidden';
+                    }
+                    gameScore += 5
+                    score.textContent = gameScore
                     ballSpeedY *= -1;
-                    collision++;
+                    collision++
                 }
                 if (!levelCompletedFlag && Array.from(bricks).every(b => b.getAttribute('data-hit') === 'true')) {
                     levelCompletedFlag = true;
@@ -304,15 +368,24 @@ function timer() {
 function resetBall() {
     const ball = document.getElementById('ball');
     const gameArea = document.getElementById('game-area');
+    const paddle = document.getElementById('paddle');
 
-    ballX = gameArea.offsetWidth / 2;
-    ballY = gameArea.offsetHeight / 2;
-    ballSpeedX = (Math.random() * 4 + 2) * (Math.random() < 0.5 ? -1 : 1);
-    ballSpeedY = -(Math.random() * 2 + 3);
+    const paddleWidth = paddle.offsetWidth;
+    const gameAreaWidth = gameArea.offsetWidth;
+    paddle.style.left = `${(gameAreaWidth - paddleWidth) / 2}px`;
+
+    const paddleRect = paddle.getBoundingClientRect();
+    const gameAreaRect = gameArea.getBoundingClientRect();
+
+    ballX = paddleRect.left + (paddleRect.width / 2) - (ball.offsetWidth / 2) - gameAreaRect.left;
+    ballY = paddleRect.top - ball.offsetHeight - 5 - gameAreaRect.top;
+
+    const baseSpeed = 3 + (currentLevel * 0.5);
+    ballSpeedX = (Math.random() * 2 + 1) * (Math.random() < 0.5 ? -1 : 1);
+    ballSpeedY = -baseSpeed;
 
     ball.style.transform = `translate(${ballX}px, ${ballY}px)`;
 }
-
 
 function togglePause() {
     isPaused = !isPaused;
@@ -357,16 +430,21 @@ function pauseMenu() {
 
 function resetGameState() {
     lives = 3;
-    score = 0;
+    gameScore = 0;
     gameTimer = 0;
     isPaused = false;
+    currentLevel = 1;
+    levelCompletedFlag = false;
+    isGameOver = false;
+    paddleSpeed = 10
     updateUI();
 }
 
 function updateUI() {
-    document.getElementById('score').textContent = score;
+    document.getElementById('score').textContent = gameScore;
     document.getElementById('lives').textContent = lives;
-    document.getElementById('timer').textContent = '0s'
+    document.getElementById('timer').textContent = '0s';
+    document.getElementById('level').textContent = currentLevel;
 }
 
 function showLevelMessage() {
@@ -390,7 +468,7 @@ function showLevelMessage() {
     setTimeout(() => {
         levelMessage.remove();
         isPaused = false;
-    }, 4000); 
+    }, 4000);
 }
 
 function levelCompleted() {
@@ -418,14 +496,14 @@ function levelCompleted() {
             gameFinish();
         } else {
             levelCompletedFlag = false;
-            currentLevel++
+            currentLevel++;
+            document.getElementById('level').textContent = currentLevel;
             levelDone.remove();
             isPaused = false;
-            generateBricks();
+            gameArea.style.backgroundColor = getColor()
+            generateBricks(currentLevel - 1);
             resetBall();
             showLevelMessage();
-            const levelSpan = document.getElementById('level-span')
-            levelSpan.textContent = `Level: ${currentLevel}`;
         }
     });
 }
@@ -484,12 +562,10 @@ function gameOver() {
     restartButton.textContent = 'Play Again';
     restartButton.addEventListener('click', () => {
         gameOverMessage.remove();
-        resetGameState()
-        gameStart()
-        generateBricks()
-        moveBall()
-        movePaddle()
-        timer()
+        resetGameState();
+        generateBricks(0);
+        showLevelMessage();
+        gameStart();
     });
     gameOverMessage.appendChild(restartButton);
     gameArea.appendChild(gameOverMessage);

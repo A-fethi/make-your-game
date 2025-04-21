@@ -7,9 +7,10 @@ let isRespawn = false;
 let isGameOver = false;
 let moveLeft = false;
 let moveRight = false;
-let paddleSpeed;
+let paddleSpeed = 10;
 let currentLevel = 1;
 let levelCompletedFlag = false;
+let paddleX = 0;
 
 const tileMaps = [
     {
@@ -187,7 +188,8 @@ function createGameUI() {
     gameContainer.appendChild(gameArea);
 
     document.body.appendChild(gameContainer);
-    paddle.style.left = `44%`;
+    // Remove the old positioning method
+    // paddle.style.left = `44%`;
     generateBricks(currentLevel - 1);
 }
 
@@ -239,18 +241,20 @@ function gameStart() {
         if (!isPaused && !isRespawn && !isGameOver) {
             const gameAreaRect = gameArea.getBoundingClientRect();
             const paddleWidth = paddle.offsetWidth;
-            let newLeft = paddle.offsetLeft;
-
+            
+            // Update paddleX based on movement
             if (moveLeft) {
-                newLeft -= paddleSpeed;
+                paddleX -= paddleSpeed;
             }
             if (moveRight) {
-                newLeft += paddleSpeed;
+                paddleX += paddleSpeed;
             }
-
-            newLeft = Math.max(0, Math.min(gameAreaRect.width - paddleWidth - 3, newLeft));
-
-            paddle.style.left = `${newLeft}px`;
+            
+            // Apply boundaries
+            paddleX = Math.max(0, Math.min(gameAreaRect.width - paddleWidth, paddleX));
+            
+            // Apply the transform
+            paddle.style.transform = `translateX(${paddleX}px)`;
         }
         requestAnimationFrame(movePaddle);
     }
@@ -287,8 +291,8 @@ function gameStart() {
             ) {
                 const paddleCenter = paddleRect.left + paddleRect.width / 2;
                 const ballCenter = ballRect.left + ballRect.width / 2;
-                const relativePosition = (ballCenter - paddleCenter) / (paddleRect.width / 2)
-                ballSpeedX = relativePosition * 3
+                const relativePosition = (ballCenter - paddleCenter) / (paddleRect.width / 2);
+                ballSpeedX = relativePosition * 3;
                 ballSpeedY *= -1.01;
             }
 
@@ -364,7 +368,6 @@ function timer() {
         }
     }, 1000);
 }
-
 function resetBall() {
     const ball = document.getElementById('ball');
     const gameArea = document.getElementById('game-area');
@@ -372,7 +375,10 @@ function resetBall() {
 
     const paddleWidth = paddle.offsetWidth;
     const gameAreaWidth = gameArea.offsetWidth;
-    paddle.style.left = `${(gameAreaWidth - paddleWidth) / 2}px`;
+    
+    // Center the paddle using transform instead of left
+    paddleX = (gameAreaWidth - paddleWidth) / 2;
+    paddle.style.transform = `translateX(${paddleX}px)`;
 
     const paddleRect = paddle.getBoundingClientRect();
     const gameAreaRect = gameArea.getBoundingClientRect();

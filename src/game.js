@@ -188,8 +188,6 @@ function createGameUI() {
     gameContainer.appendChild(gameArea);
 
     document.body.appendChild(gameContainer);
-    // Remove the old positioning method
-    // paddle.style.left = `44%`;
     generateBricks(currentLevel - 1);
 }
 
@@ -242,7 +240,6 @@ function gameStart() {
             const gameAreaRect = gameArea.getBoundingClientRect();
             const paddleWidth = paddle.offsetWidth;
             
-            // Update paddleX based on movement
             if (moveLeft) {
                 paddleX -= paddleSpeed;
             }
@@ -250,10 +247,7 @@ function gameStart() {
                 paddleX += paddleSpeed;
             }
             
-            // Apply boundaries
             paddleX = Math.max(0, Math.min(gameAreaRect.width - paddleWidth, paddleX));
-            
-            // Apply the transform
             paddle.style.transform = `translateX(${paddleX}px)`;
         }
         requestAnimationFrame(movePaddle);
@@ -263,7 +257,7 @@ function gameStart() {
 
     function moveBall(timestamp) {
         if (!lastTime) lastTime = timestamp;
-        const deltaTime = (timestamp - lastTime) / 1000; // Convert to seconds
+        const deltaTime = (timestamp - lastTime) / 1000;
         lastTime = timestamp;
 
         if (!isPaused && !isRespawn && !isGameOver) {
@@ -346,7 +340,7 @@ function gameStart() {
                 }
             }
 
-            ballX += ballSpeedX * deltaTime * 60; // Normalize speed for 60 FPS
+            ballX += ballSpeedX * deltaTime * 60;
             ballY += ballSpeedY * deltaTime * 60;
 
             ball.style.transform = `translate(${ballX}px, ${ballY}px)`;
@@ -355,7 +349,7 @@ function gameStart() {
     }
 
     movePaddle();
-    requestAnimationFrame(moveBall); // Start the game loop
+    requestAnimationFrame(moveBall);
     timer();
 }
 
@@ -376,7 +370,6 @@ function resetBall() {
     const paddleWidth = paddle.offsetWidth;
     const gameAreaWidth = gameArea.offsetWidth;
     
-    // Center the paddle using transform instead of left
     paddleX = (gameAreaWidth - paddleWidth) / 2;
     paddle.style.transform = `translateX(${paddleX}px)`;
 
@@ -474,7 +467,7 @@ function showLevelMessage() {
     setTimeout(() => {
         levelMessage.remove();
         isPaused = false;
-    }, 4000);
+    }, 2000);
 }
 
 function levelCompleted() {

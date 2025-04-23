@@ -94,7 +94,7 @@ const story = [
         intro: "Level 4: The final level. Can you break the bricks and escape the prison?",
         outro: "Congratulations! You've broken all the bricks and escaped the prison. You're free!",
         fail: "You've failed to escape the prison, the Prison is collapsing, the guards are getting closer. Try again!"
-    }
+    },
 ];
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -287,7 +287,7 @@ function gameStart() {
                 const ballCenter = ballRect.left + ballRect.width / 2;
                 const relativePosition = (ballCenter - paddleCenter) / (paddleRect.width / 2);
                 ballSpeedX = relativePosition * 3;
-                ballSpeedY *= -1.01;
+                ballSpeedY *= -1.03;
             }
 
             let collision = 0;
@@ -321,7 +321,12 @@ function gameStart() {
                 }
                 if (!levelCompletedFlag && Array.from(bricks).every(b => b.getAttribute('data-hit') === 'true')) {
                     levelCompletedFlag = true;
-                    levelCompleted();
+                    if (currentLevel < story.length) {
+                        levelCompleted();
+                    } else {
+                        gameFinish();
+                    }
+                    return;
                 }
             });
 

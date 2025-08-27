@@ -3,8 +3,10 @@ let gameScore = 0;
 let gameTimer = 0;
 let timerInterval;
 let isPaused = false;
-let currentLevel = 1;
-let levelCompletedFlag = false;
+let isRespawn = false;
+let isGameOver = false;
+let moveLeft = false;
+let moveRight = false;
 
 document.addEventListener('DOMContentLoaded', () => {
     const startMenu = document.getElementById('start-menu');
@@ -12,7 +14,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     startButton.addEventListener('click', () => {
         createGameUI();
-        showLevelMessage();
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'ArrowLeft' || event.key.toLowerCase() === 'a') moveLeft = true;
+            if (event.key === 'ArrowRight' || event.key.toLowerCase() === 'd') moveRight = true;
+        });
+
+        document.addEventListener('keyup', (event) => {
+            if (event.key === 'ArrowLeft' || event.key.toLowerCase() === 'a') moveLeft = false;
+            if (event.key === 'ArrowRight' || event.key.toLowerCase() === 'd') moveRight = false;
+            if (event.key === ' ' && !isGameOver) togglePause();
+            if (event.key === 'ArrowUp' || event.key.toLowerCase() === 'w') {
+                if (isRespawn) {
+                    isRespawn = false
+                }
+            };
+        });
         gameStart();
         startMenu.remove();
     });
@@ -30,7 +46,7 @@ function createGameUI() {
 
     const livesImage = document.createElement('img');
 
-    livesImage.src = '/src/heart.png'
+    livesImage.src = './src/heart.png';
     livesImage.id = 'lives-img'
     livesImage.style.width = '20px'
     livesImage.style.height = '20px'
@@ -42,13 +58,10 @@ function createGameUI() {
     livesSpan.appendChild(livesImage);
     livesSpan.appendChild(livesValue)
 
-    const Scorespan = document.createElement('span')
-    Scorespan.innerHTML = 'Score: <span id="score">0</span>'
+    const scoreSpan = document.createElement('span')
+    scoreSpan.innerHTML = 'Score: <span id="score">0</span>'
     const timerSpan = document.createElement('span');
     timerSpan.innerHTML = 'Time: <span id="timer">0s</span>';
-    const levelSpan = document.createElement('span');
-    levelSpan.innerHTML = `Level: <span id="level">1</span>`;
-    levelSpan.id = 'level-span'
 
     const pauseButton = document.createElement('button');
     pauseButton.id = 'pause-button';
@@ -56,9 +69,8 @@ function createGameUI() {
     pauseButton.addEventListener('click', togglePause);
 
     gameInfo.appendChild(livesSpan);
-    gameInfo.appendChild(Scorespan);
+    gameInfo.appendChild(scoreSpan);
     gameInfo.appendChild(timerSpan);
-    gameInfo.appendChild(levelSpan);
     gameInfo.appendChild(pauseButton);
 
     const gameArea = document.createElement('div');
@@ -79,7 +91,6 @@ function createGameUI() {
 
     gameContainer.appendChild(gameInfo);
     gameContainer.appendChild(gameArea);
-
     document.body.appendChild(gameContainer);
     paddle.style.left = `44%`;
     generateBricks();
@@ -93,7 +104,7 @@ function generateBricks() {
     const gameWidth = gameArea.clientWidth;
     const desiredBrickWidth = 50;
     const numBricksPerRow = Math.floor(gameWidth / desiredBrickWidth);
-    const numRows = currentLevel === 1 ? 1 : currentLevel + 1;
+    const numRows = 2;
     const colors = ['red', 'orange', 'yellow', 'green', 'blue'];
 
     brickArea.style.gridTemplateColumns = `repeat(${numBricksPerRow}, 1fr)`;
@@ -104,9 +115,6 @@ function generateBricks() {
             brick.classList.add('brick');
             brick.style.backgroundColor = colors[row % colors.length];
             brick.setAttribute('data-hit', 'false');
-            if (currentLevel > 1 && Math.random() < 0.2) {
-                brick.dataset.hits = 2
-            }
             brickArea.appendChild(brick);
         }
     }
@@ -116,10 +124,6 @@ window.addEventListener('resize', () => {
     location.reload();
 });
 
-let ballX
-let ballY
-let ballSpeedX
-let ballSpeedY
 
 function gameStart() {
     const gameArea = document.getElementById('game-area');
@@ -127,27 +131,13 @@ function gameStart() {
     const ball = document.getElementById('ball');
     const livesValue = document.getElementById('lives');
 
-    let paddleSpeed = 10;
-    let moveLeft = false;
-    let moveRight = false;
-
-    document.addEventListener('keydown', (event) => {
-        if (event.key === 'ArrowLeft' || event.key.toLowerCase() === 'a') moveLeft = true;
-        if (event.key === 'ArrowRight' || event.key.toLowerCase() === 'd') moveRight = true;
-    });
-
-    document.addEventListener('keyup', (event) => {
-        if (event.key === 'ArrowLeft' || event.key.toLowerCase() === 'a') moveLeft = false;
-        if (event.key === 'ArrowRight' || event.key.toLowerCase() === 'd') moveRight = false;
-        if (event.key === ' ') togglePause();
-    });
+    const paddleSpeed = 10;
 
     function movePaddle() {
-        if (!isPaused) {
+        if (!isPaused && !isRespawn && !isGameOver) {
             const gameAreaRect = gameArea.getBoundingClientRect();
             const paddleWidth = paddle.offsetWidth;
             let newLeft = paddle.offsetLeft;
-
             if (moveLeft) {
                 newLeft -= paddleSpeed;
             }
@@ -162,24 +152,28 @@ function gameStart() {
         requestAnimationFrame(movePaddle);
     }
 
-    resetBall()
+    movePaddle();
+
+    let ballSpeedX = (Math.random() * 4 + 2) * (Math.random() < 0.5 ? -1 : 1);
+    let ballSpeedY = -(Math.random() * 2 + 3);
 
     function moveBall() {
-        if (!isPaused) {
+        if (!isPaused && !isRespawn && !isGameOver) {
             const ballRect = ball.getBoundingClientRect();
             const gameAreaRect = gameArea.getBoundingClientRect();
             const paddleRect = paddle.getBoundingClientRect();
             const score = document.getElementById('score')
             const bricks = document.querySelectorAll('.brick');
 
-            if (ballX <= 0 || ballX + ballRect.width / 2 + 15 >= gameAreaRect.width) {
+            let newLeft = parseFloat(ball.style.left || gameAreaRect.width / 2);
+            let newTop = parseFloat(ball.style.top || gameAreaRect.height / 2);
+
+            if (newLeft <= ballRect.width || newLeft + ballRect.width >= gameAreaRect.width) {
                 ballSpeedX *= -1;
-                ballX = Math.max(0, Math.min(gameAreaRect.width - ballRect.width, ballX));
             }
 
-            if (ballY <= 0) {
+            if (newTop <= 0) {
                 ballSpeedY *= -1;
-                ballY = Math.max(0, ballY);
             }
 
             if (
@@ -193,6 +187,7 @@ function gameStart() {
                 const relativePosition = (ballCenter - paddleCenter) / (paddleRect.width / 2)
                 ballSpeedX = relativePosition * 5
                 ballSpeedY *= -1.05;
+                ball.style.top = `${paddleRect.top - ballRect.height}px`;
             }
 
             let collision = 0
@@ -203,40 +198,48 @@ function gameStart() {
                     ballRect.top < brickRect.bottom &&
                     ballRect.left < brickRect.right &&
                     ballRect.right > brickRect.left &&
-                    brick.getAttribute('data-hit') === 'false' && collision === 0
+                    brick.getAttribute('data-hit') === 'false' && collision == 0
                 ) {
                     brick.setAttribute('data-hit', 'true');
                     brick.style.visibility = 'hidden';
-                    score.textContent = +score.textContent + 1
-                    gameScore++
+                    gameScore += 5
+                    score.textContent = gameScore
                     ballSpeedY *= -1;
                     collision++
                 }
-                if (!levelCompletedFlag && Array.from(bricks).every(b => b.getAttribute('data-hit') === 'true')) {
-                    levelCompletedFlag = true
-                    levelCompleted();
+                if (Array.from(bricks).every(b => b.getAttribute('data-hit') === 'true')) {
+                    gameFinish();
                 }
             });
 
-            if (ballY + ballRect.height >= gameAreaRect.height) {
+            if (newTop + ballRect.height >= gameAreaRect.height) {
                 lives--;
                 resetBall();
                 livesValue.textContent = lives;
                 if (lives <= 0) {
+                    isGameOver = true;
                     gameOver()
                     return;
+                } else {
+                    isRespawn = true;
+                    newLeft = gameAreaRect.width / 2 - ballRect.width
+                    newTop = gameAreaRect.height / 2 - ballRect.height
                 }
             }
 
-            ballX += ballSpeedX
-            ballY += ballSpeedY
-
-            ball.style.transform = `translate(${ballX}px, ${ballY}px)`
+            ball.style.left = `${newLeft + ballSpeedX}px`;
+            ball.style.top = `${newTop + ballSpeedY}px`;
         }
         requestAnimationFrame(moveBall);
     }
 
-    movePaddle()
+    function resetBall() {
+        ball.style.left = `${gameArea.offsetWidth / 2}px`;
+        ball.style.top = `${gameArea.offsetHeight / 2}px`;
+        ballSpeedX = (Math.random() * 4 + 2) * (Math.random() < 0.5 ? -1 : 1);
+        ballSpeedY = -(Math.random() * 2 + 3);
+    }
+
     moveBall();
     timer();
 }
@@ -250,19 +253,6 @@ function timer() {
         }
     }, 1000);
 }
-
-function resetBall() {
-    const ball = document.getElementById('ball');
-    const gameArea = document.getElementById('game-area');
-
-    ballX = gameArea.offsetWidth / 2;
-    ballY = gameArea.offsetHeight / 2;
-    ballSpeedX = (Math.random() * 4 + 2) * (Math.random() < 0.5 ? -1 : 1);
-    ballSpeedY = -(Math.random() * 2 + 3);
-
-    ball.style.transform = `translate(${ballX}px, ${ballY}px)`;
-}
-
 
 function togglePause() {
     isPaused = !isPaused;
@@ -319,57 +309,6 @@ function updateUI() {
     document.getElementById('timer').textContent = '0s'
 }
 
-function showLevelMessage() {
-    const gameArea = document.getElementById('game-area');
-
-    const levelMessage = document.createElement('div');
-    levelMessage.id = 'level-message';
-
-    const levelTitle = document.createElement('h2');
-    levelTitle.textContent = `Level ${currentLevel}`;
-    levelMessage.appendChild(levelTitle);
-
-    gameArea.appendChild(levelMessage);
-
-    isPaused = true;
-
-    setTimeout(() => {
-        levelMessage.remove();
-        isPaused = false;
-    }, 2000);
-}
-
-function levelCompleted() {
-    isPaused = true;
-
-    const gameArea = document.getElementById('game-area');
-
-    const levelDone = document.createElement('div');
-    levelDone.id = 'level-completed';
-
-    const levelTitle = document.createElement('h2');
-    levelTitle.textContent = `Level ${currentLevel} Completed!`;
-    levelDone.appendChild(levelTitle);
-
-    const nextLevelButton = document.createElement('button');
-    nextLevelButton.textContent = 'Next Level';
-    levelDone.appendChild(nextLevelButton);
-    gameArea.appendChild(levelDone);
-    nextLevelButton.addEventListener('click', () => {
-        levelCompletedFlag = false;
-        currentLevel++
-        levelDone.remove();
-        isPaused = false;
-        generateBricks();
-        resetBall();
-        showLevelMessage();
-        const levelSpan = document.getElementById('level-span')
-        levelSpan.textContent = `Level: ${currentLevel}`;
-    });
-
-}
-
-
 function gameFinish() {
     isPaused = true;
     clearInterval(timerInterval);
@@ -417,12 +356,13 @@ function gameOver() {
     restartButton.textContent = 'Play Again';
     restartButton.addEventListener('click', () => {
         gameOverMessage.remove();
+        const gameContainer = document.getElementById('game-container')
+        gameContainer.remove()
+        isGameOver = false;
+        timer()
+        createGameUI()
         resetGameState()
         gameStart()
-        generateBricks()
-        moveBall()
-        movePaddle()
-        timer()
     });
     gameOverMessage.appendChild(restartButton);
     gameArea.appendChild(gameOverMessage);
